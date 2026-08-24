@@ -1,0 +1,135 @@
+{
+    "name": "PL_Gold_To_SQL",
+    "properties": {
+        "description": "Metadata-driven load: Silver/Gold Delta (ADLS Gen2) -> stg.* tables in Azure SQL via Copy Activity, then dbo.usp_LoadStarSchema resolves surrogate keys entirely in T-SQL. No Databricks cluster is invoked by this pipeline.",
+        "activities": [
+            {
+                "name": "LookupLoadMetadata",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "SELECT load_id, source_zone, source_container, source_path, target_schema, target_table, load_type FROM dbo.sql_load_metadata WHERE is_active = 1",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_Ingestion_Metadata",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ForEachLoadRow",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "LookupLoadMetadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('LookupLoadMetadata').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 4,
+                    "activities": [
+                        {
+                            "name": "CopyGoldOrSilverToStaging",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "ParquetSource",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSReadSettings",
+                                        "recursive": false,
+                                        "wildcardFileName": "*.parquet"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "AzureSqlSink",
+                                    "preCopyScript": {
+                                        "value": "TRUNCATE TABLE [@{item().target_schema}].[@{item().target_table}]",
+                                        "type": "Expression"
+                                    },
+                                    "writeBehavior": "insert"
+                                },
+                                "enableStaging": false
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_ADLS_Delta_Generic",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "container": "@item().source_container",
+                                        "folderPath": "@item().source_path"
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_AzureSQL_Staging_Generic",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "schemaName": "@item().target_schema",
+                                        "tableName": "@item().target_table"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "RunLoadStarSchemaProc",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "ForEachLoadRow",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "storedProcedureName": "[dbo].[usp_LoadStarSchema]"
+                },
+                "linkedServiceName": {
+                    "referenceName": "AzureSqlDatabase1",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "annotations": [],
+        "lastPublishTime": "2026-08-22T19:49:48Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
