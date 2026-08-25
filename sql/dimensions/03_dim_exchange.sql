@@ -1,4 +1,3 @@
-
 IF OBJECT_ID('dbo.DimExchange') IS NOT NULL DROP TABLE dbo.DimExchange;
 CREATE TABLE dbo.DimExchange (
     exchange_key    INT IDENTITY(1,1) PRIMARY KEY,
