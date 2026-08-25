@@ -18,33 +18,8 @@ The result is a single, trusted, versioned financial intelligence layer — buil
 
 ## Architecture
 
-```
-FinanceDatabase (GitHub Source)
-        │
-        ▼
-Azure Data Factory  ── metadata-driven ingestion, retries, logging
-        │
-        ▼
-ADLS Gen2 — Bronze   ── raw snapshots, partitioned by snapshot_date, immutable
-        │
-        ▼
-Azure Databricks (PySpark)
-        │
-        ├── Schema Standardization ─────► silver_financial_instrument + extensions
-        ├── Reference Data Standardization ─► dim_country / dim_exchange / dim_currency
-        └── Common Financial Taxonomy Mapping ─► taxonomy_mapping (confidence + version)
-        │
-        ▼
-Delta Lake — Silver  ── conformed, quality-scored, quarantine side-path
-        │
-        ▼
-Delta Lake — Gold    ── financial_catalog, market_summary, theme_universe, cross_asset_theme, data_quality
-        │
-   ┌────┴────┐
-   ▼         ▼
-Azure SQL   Power BI
-(star schema)   (5-page Market Intelligence Hub)
-```
+![Architecture Design](architecture/architecture_diagram.png)
+
 ---
 
 ## Tech Stack
