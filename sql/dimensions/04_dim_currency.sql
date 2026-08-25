@@ -1,4 +1,3 @@
-
 IF OBJECT_ID('dbo.DimCurrency') IS NOT NULL DROP TABLE dbo.DimCurrency;
 CREATE TABLE dbo.DimCurrency (
     currency_key     INT IDENTITY(1,1) PRIMARY KEY,
