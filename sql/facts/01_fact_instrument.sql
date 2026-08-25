@@ -15,4 +15,3 @@ CREATE TABLE dbo.FactInstrument (
     is_delisted          BIT           NULL,
     CONSTRAINT UQ_FactInstrument_InstrumentId UNIQUE (instrument_id)
 );
-GO
