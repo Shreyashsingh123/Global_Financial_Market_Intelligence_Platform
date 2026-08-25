@@ -16,4 +16,3 @@ CREATE TABLE dbo.FactDataQualityRun (
     run_datetime            DATETIME2     NULL,
     CONSTRAINT UQ_FactDataQualityRun_RunId UNIQUE (run_id, dataset)
 );
-GO
